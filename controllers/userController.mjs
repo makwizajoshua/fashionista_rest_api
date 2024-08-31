@@ -1,5 +1,7 @@
-import bcrypt from "bcrypt";
+import crypto from "crypto"; 
 import User from "../models/user.mjs";
+
+const salt = "b2d23e7020a730247b953429d8115644";
 
 export default class UserController {
     //Important:: User authencaction functions below
@@ -10,7 +12,8 @@ export default class UserController {
             const user = await User.findOne({ "email": req.body.email });
             if (!user) {
                 res.status(404).send({ "error": "User not found" });
-            } else if (await bcrypt.compare(req.body.password, user.password)) {
+                const hashedPassword = crypto.pbkdf2Sync(req.body.password, salt, 10240, 64, 'sha512').toString('hex');
+            } else if (hashedPassword === req.body.password) {
                 res.status(202).send({
                     "_id": user._id,
                     "username": user.username,
@@ -51,8 +54,9 @@ export default class UserController {
             if (existingUser) {
                 res.status(409).send({ error: "User already exists" });
             } else {
-                const hashedPassword = await bcrypt.hash(req.body.password, 10);
-                const newUser = await User.create({ ...req.body, password: hashedPassword });
+                const salt = crypto.randomBytes(32).toString('hex');
+  const hashedPassword = crypto.pbkdf2Sync(req.body.password, salt, 10240, 64, 'sha512').toString('hex');
+  const newUser = await User.create({ ...req.body, password: hashedPassword, salt });
                 res.status(201).send({
                     "_id": newUser._id,
                     "username": newUser.username,
@@ -119,43 +123,6 @@ export default class UserController {
             }
         }).catch(next);
     }
-    async changeUsername(req, res, next) {
-        const userId = req.params.id;
-        User.findOneAndUpdate({ "_id": userId }, { username: req.body.username }).then(function(updatedUser) {
-            if (updatedUser) {
-                res.status(200).send(updatedUser);
-            } else {
-                res.status(404).send({ "error": "User not found. Could not update username." });
-            }
-        }).catch(next);
-    }
-    async changeEmail(req, res, next) {
-        if (req.method != 'PUT')
-            res.status(409).send({"error" :"Invalid request received!"});
-        const userId = req.params.id;
-        User.findOneAndUpdate({ "_id": userId }, { email: req.body.email }).then(function(updatedUser) {
-            if (updatedUser) {
-                res.status(200).send(updatedUser);
-            } else {
-                res.status(404).send({ "error": "User not found. Could not update user email." });
-            }
-        }).catch(next);
-    }
-    async changeGender(req, res, next) {
-        try {
-            await User.findOneAndUpdate({"_id": req.body._id}, {"gender": req.body.gender}).then((data) => {
-                if (data) {
-                    res.status(200).send(data);
-                } else {
-                    res.status(404).send({"error": "User not found"});
-                }
-            }).catch((errData) => {
-                next(errData);
-            });
-        } catch(e) {
-            next(e);
-        }
-    }
     async changePassword(req, res, next) {
         if (req.method != 'PUT')
             res.status(409).send({"error" :"Invalid request received!"});
@@ -166,8 +133,9 @@ export default class UserController {
         }
         User.findOne({ "_id": userId }).then(async function(user) {
             if (user) {
-                if (await bcrypt.compare(req.body.currentPassword, user.password)) {
-                    const hashedPassword = await bcrypt.hash(req.body.newPassword, 10);
+                const oldHashedPassword = crypto.pbkdf2Sync(req.body.currentPassword, salt, 10240, 64, 'sha512').toString('hex');
+                if (oldHashedPassword === req.body.password) {
+                    const hashedPassword = crypto.pbkdf2Sync(req.body.newPassword, salt, 10240, 64, 'sha512').toString('hex');
                     User.findOneAndUpdate({ "_id": userId }, { password: hashedPassword }).then(function(updatedUser) {
                         if (updatedUser) {
                             res.status(200).send({ "message": "Password changed successfully." });
