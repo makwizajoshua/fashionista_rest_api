@@ -16,7 +16,7 @@ dotenv.config();
 // Set up express application
 const app = express();
 
-const apiKey = dotenv.apiKey;
+const apiKey = process.env.api_key;
 
 app.use((req, res, next) => {
     const providedApiKey = req.headers['x-api-key'] || req.query.apiKey;
@@ -45,6 +45,6 @@ apiRouter.use(ratingAndCommentRouter);
 app.use("/api/", apiRouter);
 
 // Setting up the server
-app.listen(dotenv.port || 4000, function () {
-    console.log("Server running at port " + dotenv.port || 4000);
+app.listen(process.env.port || 4000, function () {
+    console.log("Server running at port " + process.env.port || 4000);
 });

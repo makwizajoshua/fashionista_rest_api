@@ -10,11 +10,11 @@ const { Pool } = pg;
 // });
 
 const pool = new Pool({
-    user: "postgres",
-    host: "localhost",
-    database: "postgres",
-    password: "Lightwave12345",
-    port: 5436,
+    user: process.env.db_user,
+    host: process.env.db_host,
+    database: process.env.db_name,
+    password: process.env.db_pwd,
+    port: process.env.db_port,
 });
 
 // Test the connection
