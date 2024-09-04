@@ -1,64 +1,72 @@
-import Product from "../models/product.mjs";
+import pool from '../coreUtil/dbConnect.mjs';
+
+// productController.mjs
 
 export default class ProductController {
-    // POST methods below
-    async createProduct(req, res, next) {
-        Product.create(req.body).then(function(newProduct) {
-            res.status(201).send(newProduct);
-        }).catch(next);
-    }
-
-    // GET methods below
-    async getAllProducts(req, res, next) {
-        await Product.find().then(function(products) {
-            res.status(200).send(products);
-        }).catch(next);
-    }
-    async getProductFromBusiness (req, res ,next) {
+    async getAllProducts(req, res) {
         try {
-            await Product.find({"businessId" : req.params.id}).then(function(products) {
-                res.status(200).send(products);
-            }).catch(next);
-        } catch (e) {
-            next(e);
+            const products = await pool.query('SELECT * FROM products');
+            res.json(products.rows);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
         }
     }
 
-    async getProduct(req, res, next) {
-        await Product.findOne({"_id": req.params.id}).then(function(product) {
-            if (product) {
-                res.status(200).send(product);
-            } else {
-                res.status(404).send({ "error": "Product not found" });
+    async getProductById(req, res) {
+        try {
+            const { id } = req.params;
+            const product = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+            if (!product.rows[0]) {
+                return res.status(404).json({ error: 'Product not found' });
             }
-        }).catch(next);
+            res.json(product.rows[0]);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
     }
 
-    // PUT methods below
-    async updateProduct(req, res, next) {
-        const productId = req.params.id;
-        await Product.findById(productId).then(async function(product) {
-            if (product) {
-                await Product.findByIdAndUpdate(productId, req.body, { new: true }).then(function(updatedProduct) {
-                    res.status(200).send(updatedProduct);
-                }).catch(next);
-            } else {
-                res.status(404).send({ "error": "Product not found" });
-            }
-        }).catch(next);
+    async createProduct(req, res) {
+        try {
+            const { business_id, name, description, price, colors, image_urls } = req.body;
+            const product = await pool.query(
+                'INSERT INTO products (business_id, name, description, price, colors, image_urls) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+                [business_id, name, description, price, colors, image_urls]
+            );
+            res.status(201).json(product.rows[0]);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
     }
 
-    // DELETE methods below
-    async deleteProduct(req, res, next) {
-        const productId = req.params.id;
-        await Product.findById(productId).then(async function(product) {
-            if (product) {
-                await Product.findByIdAndDelete(productId).then(function(result) {
-                    res.status(200).send({ "message": "Product deleted successfully" });
-                }).catch(next);
-            } else {
-                res.status(404).send({ "error": "Product not found" });
+    async updateProduct(req, res) {
+        try {
+            const { id } = req.params;
+            const { business_id, name, description, price, colors, image_urls } = req.body;
+            const product = await pool.query(
+                'UPDATE products SET business_id = $1, name = $2, description = $3, price = $4, colors = $5, image_urls = $6 WHERE id = $7 RETURNING *',
+                [business_id, name, description, price, colors, image_urls, id]
+            );
+            if (!product.rows[0]) {
+                return res.status(404).json({ error: 'Product not found' });
             }
-        }).catch(next);
+            res.json(product.rows[0]);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    }
+
+    async deleteProduct(req, res) {
+        try {
+            const { id } = req.params;
+            await pool.query('DELETE FROM products WHERE id = $1', [id]);
+            res.json({ message: 'Product deleted successfully' });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
     }
 }

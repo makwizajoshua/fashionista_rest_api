@@ -1,44 +1,50 @@
 import express from "express";
 import bodyParser from "body-parser";
-import mongoose from "mongoose";
+import dotenv from "dotenv";
 
-import userRouter from "./routes/userRoutes.mjs";
-import productRouter from "./routes/productRouter.mjs";
-import businessRouter from "./routes/businessRoutes.mjs";
-import wishlistRouter from "./routes/wishlistRoutes.mjs";
-import ratingRouter from "./routes/ratingRoutes.mjs";
-import commentRouter from "./routes/commentRoutes.mjs";
-import categoryRouter from "./routes/categoryRoutes.mjs";
-import orderRouter from "./routes/orderRoutes.mjs";
+
+import authenticationRouter from "./routers/authenticationRouter.mjs";
+import userRouter from "./routers/userRouter.mjs";
+import businessRouter from "./routers/businessRouter.mjs";
+import productRouter from "./routers/productRouter.mjs";
+import orderRouter from "./routers/orderRouter.mjs";
+import ratingAndCommentRouter from "./routers/ratingsAndCommentsRouter.mjs";
+
+//Loading environmental variables
+dotenv.config();
+
 // Set up express application
 const app = express();
 
-// Connect to MongoDB
-mongoose.connect("mongodb://localhost:27017/fashionista");
-mongoose.Promise = global.Promise;
+const apiKey = dotenv.apiKey;
+
+app.use((req, res, next) => {
+    const providedApiKey = req.headers['x-api-key'] || req.query.apiKey;
+
+    if (providedApiKey !== apiKey) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    next();
+});
+
 
 // Set up parser
 app.use(bodyParser.json());
 
 // Initialize routes
 const apiRouter = express.Router();
+
+apiRouter.use(authenticationRouter);
 apiRouter.use(userRouter);
 apiRouter.use(businessRouter);
 apiRouter.use(productRouter);
-apiRouter.use(wishlistRouter);
-apiRouter.use(ratingRouter);
-apiRouter.use(commentRouter);
-apiRouter.use(categoryRouter);
 apiRouter.use(orderRouter);
+apiRouter.use(ratingAndCommentRouter);
 
-app.use("/api", apiRouter);
-
-// Error handling
-app.use(function(err, req, res, next) {
-    res.status(422).send({ error: err.message });
-});
+app.use("/api/", apiRouter);
 
 // Setting up the server
-app.listen(process.env.port || 4000, function() {
-    console.log("Server running at port 4000");
+app.listen(dotenv.port || 4000, function () {
+    console.log("Server running at port " + dotenv.port || 4000);
 });

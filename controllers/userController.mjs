@@ -1,167 +1,135 @@
-import crypto from "crypto"; 
-import User from "../models/user.mjs";
-
-const salt = "b2d23e7020a730247b953429d8115644";
+import pool from '../coreUtil/dbConnect.mjs';
+import argon2 from 'argon2';
 
 export default class UserController {
-    //Important:: User authencaction functions below
-    async login(req, res, next) {
-        if (req.method != 'POST')
-            res.status(409).send({"error" :"Invalid request received!"});
-        try {
-            const user = await User.findOne({ "email": req.body.email });
-            if (!user) {
-                res.status(404).send({ "error": "User not found" });
-                const hashedPassword = crypto.pbkdf2Sync(req.body.password, salt, 10240, 64, 'sha512').toString('hex');
-            } else if (hashedPassword === req.body.password) {
-                res.status(202).send({
-                    "_id": user._id,
-                    "username": user.username,
-                    "email": user.email,
-                    "gender": user.gender,
-                });
-            } else {
-                res.status(401).send({ "error": "Invalid password" });
-            }
-        } catch (error) {
-            next(error);
-        }
+  async #query(query, values) {
+    try {
+      const result = await pool.query(query, values);
+      if (!result.rows) {
+        return { error: "No rows returned" };
+      }
+      return result.rows;
+    } catch (error) {
+      return { error: error.message };
     }
-    async loginWithId(req, res, next) {
-        if (req.method != 'POST')
-            res.status(409).send({"error" :"Invalid request received!"});
-        try {
-            const user = await User.findOne({ "_id": req.params.id});
-            if (!user) {
-                res.status(404).send({ "error": "User not found" });
-            } else {
-                res.status(202).send({
-                    "_id": user._id,
-                    "username": user.username,
-                    "email": user.email,
-                    "gender": user.gender,
-                });
-            }
-        } catch (error) {
-            next(error);
-        }
-    }
-    async register(req, res, next) {
-        if (req.method != 'POST')
-            res.status(409).send({"error" :"Invalid request received!"});
-        try {
-            const existingUser = await User.findOne({ "email": req.body.email });
-            if (existingUser) {
-                res.status(409).send({ error: "User already exists" });
-            } else {
-                const salt = crypto.randomBytes(32).toString('hex');
-  const hashedPassword = crypto.pbkdf2Sync(req.body.password, salt, 10240, 64, 'sha512').toString('hex');
-  const newUser = await User.create({ ...req.body, password: hashedPassword, salt });
-                res.status(201).send({
-                    "_id": newUser._id,
-                    "username": newUser.username,
-                    "email": newUser.email,
-                    "gender": newUser.gender,
-                });
-            }
-        } catch (error) {
-            next(error);
-        }
-    }
+  }
 
-    //Reading methods below
-    async getUsers(req, res, next) {
-        if (req.method != 'GET')
-            res.status(409).send({"error" :"Invalid request received!"});
-        User.find().then(function(users) {
-            res.status(200).send(users);
-        }).catch(next);
+  async createUser(req, res) {
+    const { username, email, gender, password } = req.body;
+    const existingUser = await this.readUserByEMail(username);
+    if (existingUser) {
+      res.send(400).json({ error: "Email has already been taken" });
     }
-    async getUser(req, res, next) {
-        if (req.method != 'GET')
-            res.status(409).send({"error" :"Invalid request received!"});
-        const userId = req.params.id;
-        User.findOne({ "_id": userId }).then(function(user) {
-            if (user) {
-                res.status(200).send(user); // Fix: Send the actual user object
-            } else {
-                res.status(404).send({ "error": "User not found." });
-            }
-        }).catch(next);
+    const hashedPassword = await argon2.hash(password);
+    const query = {
+      text: `INSERT INTO users (username, email , gender, password) VALUES ($1, $2, $3, $4) RETURNING *`,
+      values: [username, email, gender, hashedPassword],
+    };
+    results = await this.#query(query);
+    if (results.error) {
+      res.status(500).json(results);
+    } else {
+      res.status(200).json(results);
     }
+  }
 
+  async readUser(req, res) {
+    const query = {
+      text: `SELECT * FROM users WHERE id = $1`,
+      values: [req.body.id],
+    };
+    results = await this.#query(query);
+    if (results.error) {
+      res.status(500).json(results);
+    } else {
+      res.status(200).json(results);
+    }
+  }
 
-    //Updating methods below
-    async updateUser(req, res, next) {
-        const userId = req.params.id;
-        const updates = {};
-        if (req.body.username) updates.username = req.body.username;
-        if (req.body.email) updates.email = req.body.email;
-        if (req.body.password) updates.password = await bcrypt.hash(req.body.password, 10);
-        // Add more fields as needed
-        User.findByIdAndUpdate(userId, updates).then(function(updatedUser) {
-            if (updatedUser) {
-                res.status(200).send(updatedUser);
-            } else {
-                res.status(404).send({ "error": "User not found" });
-            }
-        }).catch(next);
+  async readUsers() {
+    const query = {
+      text: `SELECT * FROM users`,
+    };
+    results = await this.#query(query);
+    if (results.error) {
+      res.status(500).json(results);
+    } else {
+      res.status(200).json(results);
     }
-    async changeUserDetails(req, res, next) {
-        if (req.method != 'PUT')
-            res.status(409).send({"error" :"Invalid request received!"});
-        const userId = req.params.id;
-        const updates = {};
-        if (req.body.username) updates.username = req.body.username;
-        if (req.body.email) updates.email = req.body.email;
-        if (req.body.gender) updates.gender = req.body.gender;
-        User.findOneAndUpdate({ "_id": userId }, updates).then(function(updatedUser) {
-            if (updatedUser) {
-                res.status(200).send(updatedUser);
-            } else {
-                res.status(404).send({ "error": "User not found. Could not update user details." });
-            }
-        }).catch(next);
-    }
-    async changePassword(req, res, next) {
-        if (req.method != 'PUT')
-            res.status(409).send({"error" :"Invalid request received!"});
-        const userId = req.params.id;
-        if (!req.body.currentPassword || !req.body.newPassword) {
-            res.status(400).send({ "error": "Current password and new password are required." });
-            return;
-        }
-        User.findOne({ "_id": userId }).then(async function(user) {
-            if (user) {
-                const oldHashedPassword = crypto.pbkdf2Sync(req.body.currentPassword, salt, 10240, 64, 'sha512').toString('hex');
-                if (oldHashedPassword === req.body.password) {
-                    const hashedPassword = crypto.pbkdf2Sync(req.body.newPassword, salt, 10240, 64, 'sha512').toString('hex');
-                    User.findOneAndUpdate({ "_id": userId }, { password: hashedPassword }).then(function(updatedUser) {
-                        if (updatedUser) {
-                            res.status(200).send({ "message": "Password changed successfully." });
-                        } else {
-                            res.status(404).send({ "error": "User not found. Could not update user password." });
-                        }
-                    }).catch(next);
-                } else {
-                    res.status(400).send({ "error": "Current password does not match." });
-                }
-            } else {
-                res.status(404).send({ "error": "User not found." });
-            }
-        }).catch(next);
-    }
+  }
 
-    //Deleting methods below
-    async deleteUser (req, res, next) {
-        if (req.method != 'DELETE')
-            res.status(409).send({"error" :"Invalid request received!"});
-        await User.findOneAndDelete({ "_id": req.params.id }).then(function(result) {
-            if (result) {
-                res.status(200).send({ "message": "User deleted successfully." });
-            } else {
-                res.status(404).send({ "error": "User not found." });
-            }
-        }).catch(next);
+  async updateUser(req, res) {
+    const { id, username, email, gender } = req.body;
+    if (!Number.isInteger(id)) {
+      throw new Error('Invalid ID');
     }
+    const query = {
+      text: `UPDATE users SET username = $1, email = $2, gender = $3, WHERE id = $4 RETURNING *`,
+      values: [username, email, gender, id],
+    };
+    results = await this.#query(query);
+    if (results.error) {
+      res.status(500).json(results);
+    } else {
+      res.status(200).json(results);
+    }
+  }
+
+  async deleteUser(req, res) {
+    const { id } = req.body;
+    if (!Number.isInteger(id)) {
+      throw new Error('Invalid ID');
+    }
+    const query = {
+      text: `DELETE FROM users WHERE id = $1 RETURNING *`,
+      values: [id],
+    };
+    results = await this.#query(query);
+    if (results.error) {
+      res.status(500).json(results);
+    } else {
+      res.status(200).json(results);
+    }
+  }
+
+  async readUserByUsername(req, res) {
+    const { username } = req.body;
+    const query = {
+      text: `SELECT * FROM users WHERE username = $1`,
+      values: [username],
+    };
+    results = await this.#query(query);
+    if (results.error) {
+      res.status(500).json(results);
+    } else {
+      res.status(200).json(results);
+    }
+  }
+
+  async readUserByEMail(req, res) {
+    const { email } = req.body;
+    const query = {
+      text: `SELECT * FROM users WHERE email = $1`,
+      values: [email],
+    };
+    results = await this.#query(query);
+    if (results.error) {
+      res.status(500).json(results);
+    } else {
+      res.status(200).json(results);
+    }
+  }
+  async readUserByGender(req, res) {
+    const { gender } = req.body;
+    const query = {
+      text: `SELECT * FROM users WHERE gender = $1`,
+      values: [gender],
+    };
+    results = await this.#query(query);
+    if (results.error) {
+      res.status(500).json(results);
+    } else {
+      res.status(200).json(results);
+    }
+  }
 }
