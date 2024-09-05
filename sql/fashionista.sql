@@ -25,6 +25,7 @@ CREATE TABLE products (
   price NUMERIC(10, 2) NOT NULL,
   colors TEXT[],
   image_urls TEXT[],
+  tags TEXT[]
   in_stock BOOLEAN NOT NULL DEFAULT TRUE
 );
 

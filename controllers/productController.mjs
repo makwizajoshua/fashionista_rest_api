@@ -3,6 +3,20 @@ import pool from '../coreUtil/dbConnect.mjs';
 // productController.mjs
 
 export default class ProductController {
+    async createProduct(req, res) {
+        try {
+            const { business_id, name, description, price, colors, image_urls, tags } = req.body;
+            const product = await pool.query(
+                'INSERT INTO products (business_id, name, description, price, colors, image_urls, tags) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+                [business_id, name, description, price, colors, image_urls, tags, true]
+            );
+            res.status(201).json(product.rows[0]);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    }
+
     async getAllProducts(req, res) {
         try {
             const products = await pool.query('SELECT * FROM products');
@@ -21,20 +35,6 @@ export default class ProductController {
                 return res.status(404).json({ error: 'Product not found' });
             }
             res.json(product.rows[0]);
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ error: 'Internal Server Error' });
-        }
-    }
-
-    async createProduct(req, res) {
-        try {
-            const { business_id, name, description, price, colors, image_urls } = req.body;
-            const product = await pool.query(
-                'INSERT INTO products (business_id, name, description, price, colors, image_urls) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-                [business_id, name, description, price, colors, image_urls]
-            );
-            res.status(201).json(product.rows[0]);
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: 'Internal Server Error' });

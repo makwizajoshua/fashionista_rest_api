@@ -9,6 +9,7 @@ import businessRouter from "./routers/businessRouter.mjs";
 import productRouter from "./routers/productRouter.mjs";
 import orderRouter from "./routers/orderRouter.mjs";
 import ratingAndCommentRouter from "./routers/ratingsAndCommentsRouter.mjs";
+import wishlistRouter from "./routers/wishlistRouter.mjs";
 
 //Loading environmental variables
 dotenv.config();
@@ -39,6 +40,7 @@ apiRouter.use(authenticationRouter);
 apiRouter.use(userRouter);
 apiRouter.use(businessRouter);
 apiRouter.use(productRouter);
+apiRouter.use(wishlistRouter);
 apiRouter.use(orderRouter);
 apiRouter.use(ratingAndCommentRouter);
 
