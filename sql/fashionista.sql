@@ -1,10 +1,8 @@
-CREATE TYPE gender_enum AS ENUM ('male', 'female', 'other');
-
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
-  gender gender_enum NOT NULL,
+  gender INTEGER NOT NULL,
   is_verified BOOLEAN NOT NULL
 );
 
@@ -25,8 +23,9 @@ CREATE TABLE products (
   price NUMERIC(10, 2) NOT NULL,
   colors TEXT[],
   image_urls TEXT[],
-  tags TEXT[]
-  in_stock BOOLEAN NOT NULL DEFAULT TRUE
+  category TEXT NOT NULL,
+  tags TEXT[],
+  in_stock INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE wishlisted_products (

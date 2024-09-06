@@ -9,6 +9,7 @@ wishlistRouter.post('wishlisted-products', wishlistedProductsController.addProdu
 wishlistRouter.get('wishlisted-products', wishlistedProductsController.getAllWishlistedProducts);
 wishlistRouter.get('wishlisted-products/:id', wishlistedProductsController.getWishlistedProductById);
 
-wishlistRouter.delete('wishlisted-products/:id', wishlistedProductsController.removeProductFromWishlist);
+wishlistRouter.delete('wishlisted-products/clear/:id', wishlistedProductsController.clearWishlist);
+wishlistRouter.delete('wishlisted-products', wishlistedProductsController.removeProductFromWishlist);
 
 export default wishlistRouter;

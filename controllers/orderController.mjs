@@ -3,10 +3,10 @@ import pool from "../coreUtil/dbConnect.mjs";
 class OrderController {
   async createOrder(req, res) {
     try {
-      const { userId, productId, productColor, completionCode } = req.body;
+      const { user_id, product_id, product_color, completion_code } = req.body;
       const query = {
         text: `INSERT INTO orders (user_id, product_id, product_color, completion_code) VALUES ($1, $2, $3, $4) RETURNING *`,
-        values: [userId, productId, productColor, completionCode],
+        values: [user_id, product_id, product_color, completion_code],
       };
       const result = await pool.query(query);
       res.status(201).json(result.rows[0]);
@@ -17,8 +17,10 @@ class OrderController {
 
   async getOrders(req, res) {
     try {
+      const { id } = req.params;
       const query = {
-        text: `SELECT * FROM orders`,
+        text: `SELECT * FROM orders WHERE user_id = $1`,
+        values: [id]
       };
       const result = await pool.query(query);
       res.status(200).json(result.rows);
@@ -72,7 +74,7 @@ class OrderController {
 
   async completeOrder(req, res) {
     try {
-      const { id, completionCode } = req.body;
+      const { id, complete_code } = req.body;
       const query = {
         text: `SELECT completion_code FROM orders WHERE id = $1`,
         values: [id],
@@ -82,7 +84,7 @@ class OrderController {
         throw new Error('Order not found');
       }
       const storedCompletionCode = result.rows[0].completion_code;
-      if (storedCompletionCode !== completionCode) {
+      if (storedCompletionCode !== complete_code) {
         throw new Error('Invalid completion code');
       }
       const deleteQuery = {
