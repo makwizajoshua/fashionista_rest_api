@@ -10,6 +10,7 @@ import productRouter from "./routers/productRouter.mjs";
 import orderRouter from "./routers/orderRouter.mjs";
 import ratingAndCommentRouter from "./routers/ratingsAndCommentsRouter.mjs";
 import wishlistRouter from "./routers/wishlistRouter.mjs";
+import searchRouter from "./routers/searchRoutes.mjs";
 
 //Loading environmental variables
 dotenv.config();
@@ -43,6 +44,7 @@ apiRouter.use(productRouter);
 apiRouter.use(wishlistRouter);
 apiRouter.use(orderRouter);
 apiRouter.use(ratingAndCommentRouter);
+apiRouter.use(searchRouter);
 
 app.use("/api/", apiRouter);
 

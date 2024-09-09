@@ -14,7 +14,30 @@ class BusinessesController {
       res.status(500).json({ message: 'Error creating business' });
     }
   }
-
+  async getBusinessesByLocation() {
+    try {
+      const { location } = req.body;
+      const business = await pool.query(
+        'SELECT * FROM businesses WHERE $1 LIKE ANY(locations)',
+        [location]
+      );
+      res.status(201).json(business);
+    } catch (error) {
+      res.status(500).json(error);
+    }
+  }
+  async _getBusinessesByLocation() {
+    try {
+      const { location } = req.body;
+      const businesses = await pool.query(
+        'SELECT * FROM businesses WHERE $1 LIKE ANY(locations)',
+        [location]
+      );
+      return businesses;
+    } catch (error) {
+      res.status(500).json(error);
+    }
+  }
   // Get all businesses
   async getBusinesses(req, res) {
     try {
@@ -39,7 +62,19 @@ class BusinessesController {
       res.status(500).json({ message: 'Error fetching business' });
     }
   }
-
+  async checkBusinessExist(req, res) {
+    try {
+      const userId = req.params.id;
+      const business = await pool.query('SELECT COUNT(id) as NoOfRows FROM businesses WHERE id = $1', [userId]);
+      if (business.rows.length === 0) {
+        res.status(404).json({ message: 'Business not found' });
+      } else {
+        res.status(200).json({ message: 'Business ' });
+      }
+    } catch (error) {
+      res.status(500).json({ message: 'Error fetching business' });
+    }
+  }
   // Update a business
   async updateBusiness(req, res) {
     try {

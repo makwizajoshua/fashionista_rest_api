@@ -1,5 +1,5 @@
 import pool from "../coreUtil/dbConnect.mjs";
-
+import BusinessesController from "./businessesController.mjs";
 export default class ProductController {
     async createProduct(req, res) {
         try {
@@ -54,6 +54,56 @@ export default class ProductController {
                 return res.status(404).json({ error: "Product not found" });
             }
             res.json(product.rows[0]);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal Server Error" });
+        }
+    }
+    async getProductByLocation(req, res) {
+        try {
+            const businessesController = new BusinessesController();
+            const _res = res;
+            const { id } = req.params;
+            const businesses = await businessesController._getBusinessesByLocation(req, res);
+
+            if (!Array.isArray(businesses)) {
+                businesses = [businesses];
+            }
+
+            const products = await Promise.all(businesses.map((business) => {
+                return pool.query("SELECT * FROM products WHERE business_id = $1", [
+                    business.id,
+                ]);
+            }));
+
+            const flattenedProducts = products.flat();
+
+            res.json(flattenedProducts);
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: "Internal Server Error" });
+        }
+    }
+    async _getProductByLocation(req, res) {
+        try {
+            const businessesController = new BusinessesController();
+            const _res = res;
+            const { id } = req.params;
+            const businesses = await businessesController._getBusinessesByLocation(req, res);
+
+            if (!Array.isArray(businesses)) {
+                businesses = [businesses];
+            }
+
+            const products = await Promise.all(businesses.map((business) => {
+                return pool.query("SELECT * FROM products WHERE business_id = $1", [
+                    business.id,
+                ]);
+            }));
+
+            const flattenedProducts = products.flat();
+
+            return flattenedProducts;
         } catch (error) {
             console.error(error);
             res.status(500).json({ error: "Internal Server Error" });

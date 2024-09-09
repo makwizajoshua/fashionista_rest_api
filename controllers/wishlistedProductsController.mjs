@@ -9,7 +9,18 @@ export default class WishlistedProductsController {
             res.status(500).json({ error: 'Internal Server Error' });
         }
     }
-
+    async getPorductByLocation(req, res) {
+        try {
+            const { location } = req.body;
+            const wishlistedProduct = await pool.query('SELECT * FROM wishlisted_products WHERE location = $1', [id]);
+            if (!wishlistedProduct.rows[0]) {
+                return res.status(404).json({ error: 'Wishlisted product not found' });
+            }
+            res.status(200).json(wishlistedProduct.rows[0]);
+        } catch (error) {
+            res.status(500).json({ error: 'Internal Server Error' });
+        }
+    }
     async getWishlistedProductById(req, res) {
         try {
             const { id } = req.params;

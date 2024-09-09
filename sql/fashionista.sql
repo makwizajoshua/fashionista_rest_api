@@ -12,7 +12,7 @@ CREATE TABLE businesses (
   description TEXT,
   logo_url VARCHAR(255),
   user_id INTEGER NOT NULL REFERENCES users(id),
-  locations JSONB
+  locations TEXT[]
 );
 
 CREATE TABLE products (
